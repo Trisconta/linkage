@@ -19,6 +19,9 @@ def test_main():
         print(one, end="\n\n")
     for dom in new.domain_listed():
         print(f"{dom.name} -->\n{dom}<---")
+    xlink = new.meta()[0][0]
+    for dom in xlink:
+        print(f"{dom}: {xlink[dom]}", end="\n\n")
     return True
 
 
@@ -31,9 +34,17 @@ class PAll(linkpdb.pgen.PGeneric):
         self._domains, self._ids = [], []
         self._raw_flist = []
         self._objs, self._d_data = {}, {}
+        self._xlink = {}
         if pname:
             self._scan_all(self._pdir)
         self._tidy()
+
+    def meta(self):
+        infos = (
+            self._xlink,
+            self._objs,
+        )
+        return infos
 
     def briefs(self):
         res = []
@@ -80,7 +91,32 @@ class PAll(linkpdb.pgen.PGeneric):
             mycsv = CsvInput(tup[2].path, name=d_num)
             self._objs[key] = mycsv
             self._d_data[d_num] = mycsv  # 'd_num'='d1', ...
+        self._xlink = self._grab_xlinks(self._objs, self._d_data)
         return True
+
+    def _grab_xlinks(self, objs, d_data):
+        link = objs["linka"]
+        dct, d_all = {}, {}
+        uuid2dyid = {}	# Google UUID of a photo into d1:n
+        for key in d_data:
+            dct[key] = {}
+        for trip in link.content():
+            d_num, y_id, uuid = trip
+            key = f"d{d_num}"
+            assert y_id not in dct[key], f"Duplicate y_id: {y_id}"
+            dct[key][y_id] = uuid
+            d_and_yid = key + ":" + y_id
+            if d_and_yid in d_all:
+                d_all[d_and_yid].append(uuid)
+            else:
+                d_all[d_and_yid] = [uuid]
+            assert uuid not in uuid2dyid, f"Duplicate uuid: {d_and_yid}"
+            uuid2dyid[uuid] = d_and_yid
+        return [
+            dct,
+            d_all,
+            uuid2dyid[uuid],
+        ]
 
     def _scan_all(self, pdir:str):
         lst = sorted(

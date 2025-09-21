@@ -5,7 +5,6 @@
 
 # pylint: disable=missing-function-docstring
 
-import csv
 from linkpdb.pgen import PGeneric
 
 
